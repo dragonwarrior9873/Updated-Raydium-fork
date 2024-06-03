@@ -61,6 +61,7 @@
     "react-markdown": "^8.0.7",
     "recharts": "2.5.0",
     "tailwind-merge": "1.8.0",
+    "@project-serum/anchor": "^0.26.0",
     "tailwindcss": "^3.3.2",
     "zustand": "^4.3.8"
   },
