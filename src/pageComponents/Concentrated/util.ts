@@ -138,6 +138,34 @@ export async function getTipTransaction(connection, ownerPubkey, tip) {
   return null
 }
 
+export async function getTipAccounts() {
+  try {
+    const { data } = await axios.post(
+      'https://mainnet.block-engine.jito.wtf/api/v1/bundles',
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getTipAccounts',
+        params: []
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    return data.result
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.log(err)
+  }
+  return []
+}
+
+export const getRandomNumber = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }

