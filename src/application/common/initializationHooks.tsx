@@ -13,18 +13,11 @@ import useLocalStorageItem from '@/hooks/useLocalStorage'
 import { useRecordedEffect } from '@/hooks/useRecordedEffect'
 
 import useConnection from '../connection/useConnection'
-import { getSlotCountForSecond } from '../farms/useFarmInfoLoader'
 import useNotification from '../notification/useNotification'
 import useWallet from '../wallet/useWallet'
 import { useAppVersion } from './useAppVersion'
 
 import { useAppAdvancedSettingsSyncer } from '@/application/common/useAppAdvancedSettingsSyncer'
-import useConcentrated from '../concentrated/useConcentrated'
-import useFarms from '../farms/useFarms'
-import useLiquidity from '../liquidity/useLiquidity'
-import { usePools } from '../pools/usePools'
-import useToken from '../token/useToken'
-import { useApiUrlChange } from './useApiUrlChange'
 import useAppSettings, { ExplorerName, ExplorerUrl } from './useAppSettings'
 import { useEvent } from '@/hooks/useEvent'
 import { useDocumentVisibility } from '@/hooks/useDocumentVisibility'
@@ -255,20 +248,6 @@ function useRpcPerformance() {
   }, [getPerformance, currentEndPoint?.url, documentVisible])
 }
 
-function useGetSlotCountForSecond() {
-  const { pathname } = useRouter()
-  const currentEndPoint = useConnection((s) => s.currentEndPoint)
-
-  useEffect(() => {
-    if (!currentEndPoint || !pathname.startsWith('/farms')) return
-    getSlotCountForSecond(currentEndPoint)
-    const timeoutId = setInterval(() => getSlotCountForSecond(currentEndPoint), 1000 * 60)
-    return () => {
-      clearTimeout(timeoutId)
-    }
-  }, [currentEndPoint, pathname])
-}
-
 function useHandleWindowTopError() {
   const { log } = useNotification.getState()
   useEffect(() => {
@@ -306,8 +285,6 @@ export function useClientInitialization() {
 }
 
 export function useInnerAppInitialization() {
-  useGetSlotCountForSecond()
-
   useRpcPerformance()
 
   useDefaultExplorerSyncer()
@@ -318,7 +295,6 @@ export function useInnerAppInitialization() {
 
   useGlobalRefresh()
 
-  useApiUrlChange()
 }
 
 function useGlobalRefresh() {
@@ -333,7 +309,6 @@ function useGlobalRefresh() {
         if (document.visibilityState === 'hidden') return
 
         useWallet.getState().refreshWallet()
-        useToken.getState().refreshTokenPrice()
       }, 1000 * 60)
     }, 1000 * 15) // do not refresh base and specific pages at same time
     return () => clearInterval(timeoutId)
@@ -346,10 +321,6 @@ function useGlobalRefresh() {
       intervalId = setInterval(() => {
         if (inServer) return
         if (document.visibilityState === 'hidden') return
-        if (pathname.startsWith('/farms')) useFarms.getState().refreshFarmInfos()
-        if (pathname.startsWith('/pools')) usePools.getState().refreshPools()
-        if (pathname.startsWith('/clmm')) useConcentrated.getState().refreshConcentrated()
-        if (pathname.startsWith('/liquidity')) useLiquidity.getState().refreshLiquidity()
       }, 1000 * 60 * 2)
     }, 1000 * 25)
     return () => {

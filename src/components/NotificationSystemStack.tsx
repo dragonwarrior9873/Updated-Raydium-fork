@@ -3,7 +3,6 @@ import { ReactNode, useEffect, useMemo, useState } from 'react'
 import useAppSettings from '@/application/common/useAppSettings'
 import useNotification from '@/application/notification/useNotification'
 import ConfirmDialog, { ConfirmDialogInfo } from '../pageComponents/dialogs/ConfirmDialog'
-import WelcomeBetaDialog from '../pageComponents/dialogs/WelcomeBetaDialog'
 import Col from './Col'
 import NotificationItem from './NotificationItem'
 import { NormalNotificationItemInfo, TxNotificationController, TxNotificationItemInfo } from './NotificationItem/type'
@@ -11,12 +10,6 @@ import { NormalNotificationItemInfo, TxNotificationController, TxNotificationIte
 export type PopInfoNormalNotificationItem = {
   is: 'notificationItem'
   info: NormalNotificationItemInfo
-}
-
-export type PopInfoTxNotificationItem = {
-  is: 'txItem(s)'
-  info: TxNotificationItemInfo
-  controllerCollect: Partial<TxNotificationController>
 }
 
 export type PopInfoConfirmDialog = {
@@ -33,7 +26,7 @@ export type PopInfoWelcomeDialog = {
 }
 
 //#region ------------------- core definition -------------------
-type PopInfo = PopInfoNormalNotificationItem | PopInfoTxNotificationItem | PopInfoConfirmDialog | PopInfoWelcomeDialog
+type PopInfo = PopInfoNormalNotificationItem | PopInfoConfirmDialog | PopInfoWelcomeDialog
 
 export default function NotificationSystemStack() {
   const [stack, setStack] = useState<PopInfo[]>([])
@@ -43,9 +36,8 @@ export default function NotificationSystemStack() {
   //
   const notificationItemInfos = useMemo(
     () =>
-      stack.filter((i) => i.is === 'notificationItem' || i.is === 'txItem(s)') as (
+      stack.filter((i) => i.is === 'notificationItem') as (
         | PopInfoNormalNotificationItem
-        | PopInfoTxNotificationItem
       )[],
     [stack]
   )
@@ -58,18 +50,12 @@ export default function NotificationSystemStack() {
     const log = (info: NormalNotificationItemInfo) => {
       setStack((s) => s.concat({ is: 'notificationItem', info }))
     }
-    const logTxid = (info: TxNotificationItemInfo) => {
-      const controllerCollect = {} as Partial<TxNotificationController>
-      setStack((s) => s.concat({ is: 'txItem(s)', info, controllerCollect }))
-      return controllerCollect
-    }
     const popConfirm = (info: ConfirmDialogInfo) => {
       setStack((s) => s.concat({ is: 'confirmDialog', info }))
     }
 
     useNotification.setState({
       log,
-      logTxid,
       logError(title: string | Error | unknown, description?: ReactNode) {
         const errorTitle = title instanceof Error ? title.name : title ? String(title) : ''
         const errorDescription = title instanceof Error ? title.message : description
@@ -105,24 +91,13 @@ export default function NotificationSystemStack() {
         {notificationItemInfos.map((itemInfo, idx, total) => {
           const idxFromLast = total.length - idx
           if (idxFromLast > 3) return null // only 3 items may exist at the same time
-          return itemInfo.is === 'txItem(s)' ? (
-            <NotificationItem
-              key={idx}
-              info={itemInfo.info}
-              is={itemInfo.is}
-              controllerCollect={itemInfo.controllerCollect}
-            />
-          ) : (
-            <NotificationItem key={idx} info={itemInfo.info} is={itemInfo.is} />
-          )
+          return <NotificationItem key={idx} info={itemInfo.info}  is={itemInfo.is}/>
         })}
       </Col>
       {confirmDialogInfos.map(({ info }, idx) => (
         <ConfirmDialog key={idx} {...info} />
       ))}
-      {popDialogInfos.map(({ info }, idx) => (
-        <WelcomeBetaDialog key={idx} content={info.content} onConfirm={info.onConfirm} />
-      ))}
+      
     </>
   )
 }

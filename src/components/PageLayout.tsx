@@ -23,12 +23,8 @@ import useAsyncMemo from '@/hooks/useAsyncMemo'
 import useDocumentMetaTitle from '@/hooks/useDocumentMetaTitle'
 import { useForceUpdate } from '@/hooks/useForceUpdate'
 import { useUrlQuery } from '@/hooks/useUrlQuery'
-import SetExplorer from '@/pageComponents/settings/SetExplorer'
-import SetTolerance from '@/pageComponents/settings/SetTolerance'
 import { LinkAddress } from '@/types/constants'
 
-import useConcentrated from '@/application/concentrated/useConcentrated'
-import { useNonATATokens } from '@/application/migrateToATA/useNonATATokens'
 import toPubString from '@/functions/format/toMintString'
 import { Badge } from './Badge'
 import Button from './Button'
@@ -50,7 +46,6 @@ import Tooltip from './Tooltip'
 import MessageBoardWidget from './navWidgets/MessageBoardWidget'
 import { TxVersionWidget } from './navWidgets/TxVersionWidget'
 import WalletWidget from './navWidgets/WalletWidget'
-import SetTransactionPriority from '@/pageComponents/settings/SetTransactionPriority'
 
 /**
  * for easier to code and read
@@ -110,10 +105,6 @@ export default function PageLayout(props: {
       className={`w-full mobile:w-full h-full mobile:h-full`}
     >
       <div className="grid-area-d">
-        <BetaBanner className="w-full" />
-        <RPCPerformanceBanner className="w-full" />
-        <NewConcentratedPoolBanner className="w-full" />
-        <NoneATABanner className="w-full" />
       </div>
       {isMobile ? (
         <>
@@ -139,7 +130,6 @@ export default function PageLayout(props: {
         {props.contentBanner}
         {/* do not check ata currently
         <MigrateBubble /> */}
-        <VersionTooOldDialog />
         <DisclaimerDialog />
         <div
           className={twMerge(
@@ -155,150 +145,7 @@ export default function PageLayout(props: {
     </div>
   )
 }
-function RPCPerformanceBanner({ className }: { className?: string }) {
-  const isLowRpcPerformance = useAppSettings((s) => s.isLowRpcPerformance)
 
-  return (
-    <div className={className}>
-      <FadeIn>
-        {isLowRpcPerformance && (
-          <div className="bg-[#dacc363f] text-center text-[#D8CB39] text-sm mobile:text-xs px-4 py-1">
-            The Solana network is experiencing congestion or reduced performance. Transactions may fail to send or
-            confirm.
-          </div>
-        )}
-      </FadeIn>
-    </div>
-  )
-}
-
-function NewConcentratedPoolBanner({ className }: { className?: string }) {
-  const sdkParsedAmmPools = useConcentrated((s) => s.sdkParsedAmmPools)
-  const oldCLMMID = new Set([
-    'DdigEybG2begUfkpSUP63o5CKF2Q9yGCWktZ6Hnb1RxN' /* old stSOL-SOL */,
-    'HZf7wppva3wk4dCnrUe2GE1c8aUEXsUNk5asMFQ5sYch' /* old mSOL-SOL */,
-    'EXudMHn33b14PXVNzB6icD4jGLF27dbSC3m2bJXMuLEN' /* old mSOL-stSOL */,
-    '3NeUgARDmFgnKtkJLqUcEUNCfknFCcGsFfMJCtx6bAgx' /* old USDC-USDT */
-  ])
-  const userHasTargetPosition = useMemo(
-    () =>
-      sdkParsedAmmPools.some((c) => {
-        const clmmID = toPubString(c.state.id)
-        const isTargetPool = oldCLMMID.has(clmmID)
-        return isTargetPool && Boolean(c.positionAccount?.length)
-      }),
-    [sdkParsedAmmPools]
-  )
-  return (
-    <div className={className}>
-      <FadeIn>
-        {userHasTargetPosition && (
-          <div className="bg-[#dacc363f] text-center text-[#D8CB39] text-sm mobile:text-xs px-4 py-1">
-            You have a concentrated liquidity position to migrate. 0.01% fee tier pools have been upgraded with
-            optimized tick spacing to allow for more granular price ranges on stable-pairs.
-            <br /> RAY rewards have shifted from old pools to upgraded pools. Go to the Concentrated liquidity page and
-            manually migrate liquidity to continue receiving RAY rewards.
-          </div>
-        )}
-      </FadeIn>
-    </div>
-  )
-}
-
-function NoneATABanner({ className }: { className?: string }) {
-  const nonATATokens = useNonATATokens()
-  const hasMigratableTokens = nonATATokens.size > 0
-  return (
-    <div className={className}>
-      <FadeIn>
-        {hasMigratableTokens && (
-          <div className="flex justify-center bg-[#dacc363f] text-center text-[#D8CB39] text-sm mobile:text-xs px-4 py-1">
-            <div>
-              You have non-ATA tokens to migrate. Please <Link href="/debug">click here to migrate</Link> to new ATA
-              account
-            </div>
-          </div>
-        )}
-      </FadeIn>
-    </div>
-  )
-}
-
-function BetaBanner({ className }: { className?: string }) {
-  const [isBetaInfoOpen, setIsBetaInfoOpen] = useState(true)
-  return (
-    <div className={className}>
-      <div className={`flex flex-row ${isBetaInfoOpen ? 'flex' : 'hidden'} bg-ground-color-light`}>
-        <div className="flex items-center justify-center text-center my-2" style={{ width: '95%' }}>
-          <div className="text-primary text-sm font-normal">
-            <span>In case you missed it, Raydium V3 Beta is live - check it out </span>
-            <a href="https://beta.raydium.io" rel="noreferrer" target="_blank" className="text-link-color">
-              here
-            </a>
-            <span>! More info in the </span>
-            <a
-              href="https://x.com/RaydiumProtocol/status/1772563377501724786"
-              rel="noreferrer"
-              target="_blank"
-              className="text-link-color"
-            >
-              Tweet
-            </a>
-            .
-          </div>
-        </div>
-        <div
-          className="flex items-center justify-center cursor-pointer hover:bg-ground-color"
-          style={{ width: '5%' }}
-          onClick={() => setIsBetaInfoOpen(false)}
-        >
-          ×
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function VersionTooOldDialog() {
-  const versionRefreshData = useAppVersion((s) => s.versionFresh)
-  const isInBonsaiTest = useAppSettings((s) => s.isInBonsaiTest)
-  const isInLocalhost = useAppSettings((s) => s.isInLocalhost)
-  if (isInBonsaiTest || isInLocalhost) return null
-  return (
-    <Dialog open={versionRefreshData === 'too-old' && !isInLocalhost && !isInBonsaiTest} canClosedByMask={false}>
-      {({ close }) => (
-        <Card
-          className={twMerge(`p-8 rounded-3xl w-[min(480px,95vw)] mx-8 border-1.5 border-[rgba(171,196,255,0.2)]`)}
-          size="lg"
-          style={{
-            background:
-              'linear-gradient(140.14deg, rgba(0, 182, 191, 0.15) 0%, rgba(27, 22, 89, 0.1) 86.61%), linear-gradient(321.82deg, #18134D 0%, #1B1659 100%)',
-            boxShadow: '0px 8px 48px rgba(171, 196, 255, 0.12)'
-          }}
-        >
-          <Col className="items-center">
-            <div className="font-semibold text-xl text-[#D8CB39] mb-3 text-center">New version available</div>
-            <div className="text-center mt-2  mb-6 text-[#ABC4FF]">Refresh the page to update and use the app.</div>
-
-            <div className="self-stretch">
-              <Col>
-                <Button
-                  className={`text-[#ABC4FF]  frosted-glass-teal`}
-                  onClick={() => refreshWindow({ noCache: true })}
-                >
-                  Refresh
-                </Button>
-                <Button className="text-[#ABC4FF]" type="text" onClick={close}>
-                  Update later
-                </Button>
-              </Col>
-            </div>
-          </Col>
-        </Card>
-      )}
-    </Dialog>
-  )
-}
 function DisclaimerDialog() {
   const needPopDisclaimer = useAppSettings((s) => s.needPopDisclaimer)
   const [userHaveClickedAgree, setUserHaveClickedAgree] = useState(false)
@@ -688,7 +535,6 @@ function SideMenu({ className, onClickCloseBtn }: { className?: string; onClickC
             <div className="mx-8 border-b border-[rgba(57,208,216,0.16)] my-2 mobile:my-1"></div>
             <div className="flex-1 overflow-auto no-native-scrollbar mt-2">
               <RpcConnectionPanelSidebarWidget />
-              <SettingSidebarWidget />
               <CommunityPanelSidebarWidget />
 
               <OptionItem noArrow href="https://raydium.gitbook.io/raydium/" iconSrc="/icons/msic-docs.svg">
@@ -816,30 +662,6 @@ function OptionItem({
         {!noArrow && <Icon size={isMobile ? 'xs' : 'sm'} heroIconName="chevron-right" iconClassName="text-[#ACE3E6]" />}
       </Row>
     </Link>
-  )
-}
-
-function SettingSidebarWidget() {
-  return (
-    <PageLayoutPopoverDrawer renderPopoverContent={<SettingPopover />}>
-      <OptionItem iconSrc="/icons/msic-settings.svg">Settings</OptionItem>
-    </PageLayoutPopoverDrawer>
-  )
-}
-
-function SettingPopover() {
-  return (
-    <div className="py-5 px-6 mobile:py-2 mobile:px-3">
-      <div>
-        <SetTolerance />
-      </div>
-      <div className="mt-4">
-        <SetTransactionPriority />
-      </div>
-      <div className="mt-4">
-        <SetExplorer />
-      </div>
-    </div>
   )
 }
 

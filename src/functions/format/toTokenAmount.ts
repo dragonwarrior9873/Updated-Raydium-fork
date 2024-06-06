@@ -1,4 +1,4 @@
-import { getTokenProgramId } from '@/application/token/isToken2022'
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import {
   QuantumSOLAmount,
   QuantumSOLToken,
@@ -75,7 +75,7 @@ export function toTokenAmount(
   }
 ): TokenAmount | QuantumSOLAmount | undefined {
   if (!token) return undefined
-  const programId = getTokenProgramId(token)
+  const programId = TOKEN_PROGRAM_ID
   const parsedToken = isToken(token)
     ? token
     : new Token(programId, token.mint, token.decimals, token.symbol, token.name)
@@ -86,8 +86,8 @@ export function toTokenAmount(
     options?.alreadyDecimaled
       ? new Fraction(numberDetails.numerator, numberDetails.denominator).mul(new BN(10).pow(toBN(parsedToken.decimals)))
       : amount
-      ? toFraction(amount)
-      : toFraction(0)
+        ? toFraction(amount)
+        : toFraction(0)
   )
 
   const iswsol =
