@@ -10,11 +10,11 @@ export function useDocumentScrollActionDetector() {
     if (!('document' in globalThis)) return
     let timeoutId
     const handleScroll = () => {
-      globalThis.document.body.style.setProperty('--is-scrolling', '1')
-      globalThis.clearTimeout(timeoutId)
-      timeoutId = globalThis.setTimeout(() => {
-        globalThis.document.body.style.setProperty('--is-scrolling', '0')
-      }, 500)
+      // globalThis.document.body.style.setProperty('--is-scrolling', '1')
+      // globalThis.clearTimeout(timeoutId)
+      // timeoutId = globalThis.setTimeout(() => {
+      //   globalThis.document.body.style.setProperty('--is-scrolling', '0')
+      // }, 500)
     }
     document.addEventListener('scroll', handleScroll, { passive: true })
     return () => {
@@ -35,11 +35,11 @@ export default function useScrollActionDetector(
     let timeoutId
 
     const scrollingDetector = () => {
-      elRef.current?.style.setProperty('--is-scrolling', '1')
-      globalThis.clearTimeout(timeoutId)
-      timeoutId = globalThis.setTimeout(() => {
-        elRef.current?.style.setProperty('--is-scrolling', '0')
-      }, 500)
+      // elRef.current?.style.setProperty('--is-scrolling', '1')
+      // globalThis.clearTimeout(timeoutId)
+      // timeoutId = globalThis.setTimeout(() => {
+      //   elRef.current?.style.setProperty('--is-scrolling', '0')
+      // }, 500)
     }
     elRef.current?.addEventListener('scroll', scrollingDetector, { passive: true })
     return () => {
@@ -52,14 +52,14 @@ export default function useScrollActionDetector(
   const resizeObserver = useRef<ResizeObserver | undefined>(
     'ResizeObserver' in globalThis
       ? new globalThis.ResizeObserver(() => {
-          updateScrollDetector((n) => n + 1)
-        })
+        updateScrollDetector((n) => n + 1)
+      })
       : undefined
   )
 
   // observe the element if it load more and more children
   useEffect(() => {
-    if (!elRef.current) return () => {}
+    if (!elRef.current) return () => { }
     resizeObserver.current?.observe(elRef.current)
     return () => elRef.current && resizeObserver.current?.unobserve(elRef.current)
   }, [elRef])

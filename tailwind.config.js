@@ -123,7 +123,7 @@ const config = {
         '4-auto': 'auto auto auto auto',
         '5-auto': 'auto auto auto auto auto',
         '6-auto': 'auto auto auto auto auto auto',
-        'auto-fit': 'repeat(auto-fit, minmax(0, 1fr))'
+        // 'auto-fit': 'repeat(auto-fit, minmax(0, 1fr))'
       },
       transitionDuration: {
         3000: '3000ms', // for debug

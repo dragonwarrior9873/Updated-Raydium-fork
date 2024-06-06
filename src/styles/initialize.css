@@ -2,6 +2,7 @@
 html,
 body,
 #__next,
+
 .app {
   height: 100%;
 }
@@ -10,11 +11,36 @@ body {
     'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
     'Segoe UI Symbol';
   font-feature-settings: 'ss04', 'tnum' 1;
-  color: var(--primary);
-  background-color: rgb(19, 26, 53);
+  line-height: 1.0;
+  min-height: var(--viewport-height);
+  min-width: 320px;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  background-image: url("/backgroundImages/bg.jpg");
+  content: '';
+  display: block;
+  background-attachment: scroll;
+  height: var(--background-height);
+  left: 0;
+  position: fixed;
+  top: 0;
+  transform: scale(1);
+  width: 100vw;
+  z-index: 0;
+  background-size: cover, auto, cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
+
 :root {
   font-size: 16px;
+  --background-height: 100vh;
+  --site-language-alignment: left;
+  --site-language-direction: ltr;
+  --site-language-flex-alignment: flex-start;
+  --site-language-indent-left: 1;
+  --site-language-indent-right: 0;
+  --viewport-height: 100vh;
 }
 * {
   box-sizing: border-box;
